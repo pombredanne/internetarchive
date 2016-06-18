@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
-#
+from __future__ import unicode_literals
+
 # internetarchive documentation build configuration file, created by
 # sphinx-quickstart on Mon Sep 23 20:16:03 2013.
 #
@@ -15,13 +16,14 @@
 import sys
 import os
 
+import internetarchive
+from internetarchive import __version__
+import alabaster
+
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 sys.path.insert(0, os.path.abspath('../../'))
-
-import internetarchive
-from internetarchive import __version__
 
 # -- General configuration ------------------------------------------------
 
@@ -37,6 +39,8 @@ extensions = [
     'sphinx.ext.todo',
     'sphinx.ext.coverage',
     'sphinx.ext.viewcode',
+    'sphinx.ext.intersphinx',
+    'alabaster',
 ]
 
 # Add any paths that contain templates here, relative to this directory.
@@ -52,8 +56,8 @@ source_suffix = '.rst'
 master_doc = 'index'
 
 # General information about the project.
-project = u'internetarchive'
-copyright = u'2013, Jacob M. Johnson'
+project = 'internetarchive'
+copyright = '2015, Internet Archive'
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
@@ -107,7 +111,25 @@ pygments_style = 'sphinx'
 
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
-html_theme = 'default'
+html_theme_path = [alabaster.get_path()]
+html_theme = 'alabaster'
+html_sidebars = {
+    '**': [
+        'sidebarlogo.html',
+        'about.html',
+        'navigation.html',
+        'usefullinks.html',
+        'searchbox.html',
+    ]
+}
+html_theme_options = {
+    'github_user': 'jjjake',
+    'github_repo': 'internetarchive',
+    'travis_button': True,
+    'github_button': True,
+    'show_powered_by': 'false',
+    'sidebar_width': '200px',
+}
 
 # Theme options are theme-specific and customize the look and feel of a theme
 # further.  For a list of options available for each theme, see the
@@ -126,7 +148,7 @@ html_theme = 'default'
 
 # The name of an image file (relative to this directory) to place at the top
 # of the sidebar.
-#html_logo = None
+#html_logo = '_static/ia.png'
 
 # The name of an image file (within the static path) to use as favicon of the
 # docs.  This file should be a Windows icon file (.ico) being 16x16 or 32x32
@@ -136,7 +158,7 @@ html_theme = 'default'
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
-#html_static_path = ['_static']
+html_static_path = ['_static']
 
 # Add any extra paths that contain custom files (such as robots.txt or
 # .htaccess) here, relative to this directory. These files are copied
@@ -205,8 +227,8 @@ latex_elements = {
 # (source start file, target name, title,
 #  author, documentclass [howto/manual]).
 latex_documents = [
-  ('index', 'internetarchive.tex', u'internetarchive Documentation',
-   u'Jacob M. Johnson', 'manual'),
+  ('index', 'internetarchive.tex', 'internetarchive Documentation',
+   'Jacob M. Johnson', 'manual'),
 ]
 
 # The name of an image file (relative to this directory) to place at the top of
@@ -235,8 +257,8 @@ latex_documents = [
 # One entry per manual page. List of tuples
 # (source start file, name, description, authors, manual section).
 man_pages = [
-    ('index', 'internetarchive', u'internetarchive Documentation',
-     [u'Jacob M. Johnson'], 1)
+    ('index', 'internetarchive', 'internetarchive Documentation',
+     ['Jacob M. Johnson'], 1)
 ]
 
 # If true, show URL addresses after external links.
@@ -249,8 +271,8 @@ man_pages = [
 # (source start file, target name, title, author,
 #  dir menu entry, description, category)
 texinfo_documents = [
-  ('index', 'internetarchive', u'internetarchive Documentation',
-   u'Jacob M. Johnson', 'internetarchive', 'One line description of project.',
+  ('index', 'internetarchive', 'internetarchive Documentation',
+   'Jacob M. Johnson', 'internetarchive', 'One line description of project.',
    'Miscellaneous'),
 ]
 
@@ -267,3 +289,8 @@ texinfo_documents = [
 #texinfo_no_detailmenu = False
 
 #autodoc_member_order = 'bysource'
+
+intersphinx_mapping = {
+    'python': ('https://docs.python.org/2.7', None),
+    'requests': ('http://docs.python-requests.org/en/latest/', None)
+}

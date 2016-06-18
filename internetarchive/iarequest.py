@@ -1,3 +1,31 @@
+# -*- coding: utf-8 -*-
+#
+# The internetarchive module is a Python/CLI interface to Archive.org.
+#
+# Copyright (C) 2012-2016 Internet Archive
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU Affero General Public License as
+# published by the Free Software Foundation, either version 3 of the
+# License, or (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU Affero General Public License for more details.
+#
+# You should have received a copy of the GNU Affero General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+"""
+internetarchive.iarequest
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+:copyright: (C) 2012-2016 by Internet Archive.
+:license: AGPL 3, see LICENSE for more details.
+"""
+from __future__ import absolute_import
+
 try:
     import ujson as json
 except ImportError:
@@ -11,17 +39,17 @@ import requests
 from jsonpatch import make_patch
 import six
 
-from . import auth
+from internetarchive import auth, __version__
 from internetarchive.utils import needs_quote
 
 
 class S3Request(requests.models.Request):
     def __init__(self,
-        metadata=None,
-        queue_derive=True,
-        access_key=None,
-        secret_key=None,
-        **kwargs):
+                 metadata=None,
+                 queue_derive=True,
+                 access_key=None,
+                 secret_key=None,
+                 **kwargs):
 
         super(S3Request, self).__init__(**kwargs)
 
@@ -60,8 +88,6 @@ class S3PreparedRequest(requests.models.PreparedRequest):
     def __init__(self):
         super(S3PreparedRequest, self).__init__()
 
-    # prepare()
-    # ____________________________________________________________________________________
     def prepare(self, method=None, url=None, headers=None, files=None, data=None,
                 params=None, auth=None, cookies=None, hooks=None, queue_derive=None,
                 metadata={}):
@@ -77,8 +103,6 @@ class S3PreparedRequest(requests.models.PreparedRequest):
         # This MUST go after prepare_auth. Authenticators could add a hook
         self.prepare_hooks(hooks)
 
-    # prepare_headers()
-    # ____________________________________________________________________________________
     def prepare_headers(self, headers, metadata, queue_derive=True):
         """Convert a dictionary of metadata into S3 compatible HTTP
         headers, and append headers to ``headers``.
@@ -91,12 +115,17 @@ class S3PreparedRequest(requests.models.PreparedRequest):
         :param headers: (optional) S3 compatible HTTP headers.
 
         """
+        if not metadata.get('scanner'):
+            scanner = 'Internet Archive Python library {0}'.format(__version__)
+            metadata['scanner'] = scanner
         prepared_metadata = prepare_metadata(metadata)
+
         headers['x-archive-auto-make-bucket'] = 1
         if queue_derive is False:
             headers['x-archive-queue-derive'] = 0
         else:
             headers['x-archive-queue-derive'] = 1
+
         for meta_key, meta_value in prepared_metadata.items():
             # Encode arrays into JSON strings because Archive.org does not
             # yet support complex metadata structures in
@@ -105,8 +134,8 @@ class S3PreparedRequest(requests.models.PreparedRequest):
                 meta_value = json.dumps(meta_value)
             # Convert the metadata value into a list if it is not already
             # iterable.
-            if (isinstance(meta_value, six.string_types)
-                    or not hasattr(meta_value, '__iter__')):
+            if (isinstance(meta_value, six.string_types) or
+                    not hasattr(meta_value, '__iter__')):
                 meta_value = [meta_value]
             # Convert metadata items into HTTP headers and add to
             # ``headers`` dict.
@@ -115,6 +144,8 @@ class S3PreparedRequest(requests.models.PreparedRequest):
                     continue
                 header_key = 'x-archive-meta{0:02d}-{1}'.format(i, meta_key)
                 if (isinstance(value, six.string_types) and needs_quote(value)):
+                    if six.PY2 and isinstance(value, six.text_type):
+                        value = value.encode('utf-8')
                     value = 'uri({0})'.format(urllib.parse.quote(value))
                 # because rfc822 http headers disallow _ in names, IA-S3 will
                 # translate two hyphens in a row (--) into an underscore (_).
@@ -125,19 +156,19 @@ class S3PreparedRequest(requests.models.PreparedRequest):
 
 class MetadataRequest(requests.models.Request):
     def __init__(self,
-        metadata=None,
-        source_metadata=None,
-        target=None,
-        priority=None,
-        access_key=None,
-        secret_key=None,
-        append=None,
-        **kwargs):
+                 metadata=None,
+                 source_metadata=None,
+                 target=None,
+                 priority=None,
+                 access_key=None,
+                 secret_key=None,
+                 append=None,
+                 **kwargs):
 
         super(MetadataRequest, self).__init__(**kwargs)
 
         if not self.auth:
-            self.auth = auth.MetadataAuth(access_key, secret_key)
+            self.auth = auth.S3PostAuth(access_key, secret_key)
         metadata = {} if not metadata else metadata
 
         self.metadata = metadata
@@ -175,8 +206,6 @@ class MetadataPreparedRequest(requests.models.PreparedRequest):
     def __init__(self):
         super(MetadataPreparedRequest, self).__init__()
 
-    # prepare()
-    # ____________________________________________________________________________________
     def prepare(self, method=None, url=None, headers=None, files=None, data=None,
                 params=None, auth=None, cookies=None, hooks=None, metadata={},
                 source_metadata=None, target=None, priority=None, append=None):
@@ -259,15 +288,23 @@ def prepare_metadata(metadata, source_metadata=None, append=False):
     prepared_metadata = {}
 
     # Functions for dealing with metadata keys containing indexes.
-    contains_index = lambda k: re.search(r'\[\d+\]', k)
-    get_index = lambda k: int(re.search(r'(?<=\[)\d+(?=\])', k).group())
-    rm_index = lambda k: k.split('[')[0]
+    def get_index(key):
+        match = re.search(r'(?<=\[)\d+(?=\])', key)
+        if match is not None:
+            return int(match.group())
+
+    def rm_index(key):
+        return key.split('[')[0]
+
+    #contains_index = lambda k: re.search(r'\[\d+\]', k)
+    #get_index = lambda k: int(re.search(r'(?<=\[)\d+(?=\])', k).group())
+    #rm_index = lambda k: k.split('[')[0]
 
     # Create indexed_keys counter dict. i.e.: {'subject': 3} -- subject
     # (with the index removed) appears 3 times in the metadata dict.
     indexed_keys = {}
     for key in metadata:
-        if not contains_index(key):
+        if not get_index(key):
             continue
         count = len([x for x in metadata if rm_index(x) == rm_index(key)])
         indexed_keys[rm_index(key)] = count
@@ -311,7 +348,7 @@ def prepare_metadata(metadata, source_metadata=None, append=False):
         if key not in _done:
             indexes = []
             for k in metadata:
-                if not contains_index(k):
+                if not get_index(k):
                     continue
                 elif not rm_index(k) == key:
                     continue

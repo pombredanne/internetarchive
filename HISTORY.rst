@@ -3,6 +3,80 @@
 Release History
 ---------------
 
+1.0.3 (2016-05-16)
+++++++++++++++++++
+
+**Features and Improvements**
+
+- Use scrape API for getting total number of results rather than the advanced search API.
+- Improved error messages for IA-S3 (upload) related errors.
+- Added retry suport to delete.
+- ``ia delete`` no longer exits if a single request fails when deleting multiple files, but continues onto the next file.
+  If any file fails, the command will exit with a non-zero status code.
+- All search requests now require authentication via IA-S3 keys.
+  You can run ``ia configure`` to generate a config file that will be used to authenticate all search requests automatically. 
+  For more details refer to the following links:
+    http://internetarchive.readthedocs.io/en/latest/quickstart.html?highlight=configure#configuring
+    http://internetarchive.readthedocs.io/en/latest/api.html#configuration
+- Added ability to specify your own filepath in ``ia configure`` and ``internetarchive.configure()``.
+
+**Bugfixes**
+
+- Updated ``requests`` lib version requirements.
+  This resolves issues with sending binary strings as bodies in Python 3.
+- Improved support for Windows, see `https://github.com/jjjake/internetarchive/issues/126 <https://github.com/jjjake/internetarchive/issues/126>`_ for more details.
+- Previously all requests were made in HTTP for Python versions < 2.7.9 due to the issues described at `https://urllib3.readthedocs.org/en/latest/security.html <https://urllib3.readthedocs.org/en/latest/security.html>`_.
+  In favor of security over convenience, all requests are now made via HTTPS regardless of Python version.
+  Refer to `http://internetarchive.readthedocs.org/en/latest/troubleshooting.html#https-issues <http://internetarchive.readthedocs.org/en/latest/troubleshooting.html#https-issues>`_ if you are experiencing issues.
+- Fixed bug in ``ia`` CLI where ``--insecure`` was still making HTTPS requests when it should have been making HTTP requests.
+- Fixed bug in ``ia delete`` where ``--all`` option wasn't working because it was using ``item.iter_files`` instead of ``item.get_files``.
+- Fixed bug in ``ia upload`` where uploading files with unicode file names were failing.
+- Fixed bug in upload where filenames with ``;`` characters were being truncated.
+- Fixed bug in ``internetarchive.catalog`` where TypeError was being raised in Python 3 due to mixing bytes with strings.
+
+1.0.2 (2016-03-07)
+++++++++++++++++++
+
+**Bugfixes**
+
+- Fixed OverflowError bug in uploads on 32-bit systems when uploading files larger than ~2GB.
+- Fixed unicode bug in upload where ``urllib.parse.quote`` is unable to parse non-encoded strings.
+
+**Features and Improvements**
+
+- Only generate MD5s in upload if they are used (i.e. verify, delete, or checksum is True).
+- verify is off by default in ``ia upload``, it can be turned on with ``ia upload --verify``.
+
+1.0.1 (2016-03-04)
+++++++++++++++++++
+
+**Bugfixes**
+
+- Fixed memory leak in `ia upload --spreadsheet=metadata.csv`.
+- Fixed arg parsing bug in `ia` CLI.
+
+1.0.0 (2016-03-01)
+++++++++++++++++++
+
+**Features and Improvements**
+
+- Renamed ``internetarchive.iacli`` to ``internetarchive.cli``.
+- Moved ``File`` object to ``internetarchive.files``.
+- Converted config fromat from YAML to INI to avoid PyYAML requirement.
+- Use HTTPS by default for Python versions > 2.7.9.
+- Added ``get_username`` function to API.
+- Improved Python 3 support. ``internetarchive`` is now being tested against Python versions 2.6, 2.7, 3.4, and 3.5.
+- Improved plugin support.
+- Added retry support to download and metadata retrieval.
+- Added ``Collection`` object.
+- Made ``Item`` objects hashable and orderable.
+
+**Bugfixes**
+
+- IA's Advanced Search API no longer supports deep-paging of large result sets.
+  All search functions have been refactored to use the new Scrape API (http://archive.org/help/aboutsearch.htm).
+  Search functions in previous versions are effictively broken, upgrade to >=1.0.0.
+
 0.9.8 (2015-11-09)
 ++++++++++++++++++
 
