@@ -120,6 +120,7 @@ def get_files(identifier,
               files=None,
               formats=None,
               glob_pattern=None,
+              on_the_fly=None,
               **get_item_kwargs):
     """Get :class:`File` objects from an item.
 
@@ -135,6 +136,10 @@ def get_files(identifier,
     :type glob_pattern: str
     :param glob_pattern: (optional) Only return files matching the given glob pattern.
 
+    :type on_the_fly: bool
+    :param on_the_fly: (optional) Include on-the-fly files (i.e. derivative EPUB,
+                       MOBI, DAISY files).
+
     :param \*\*get_item_kwargs: (optional) Arguments that ``get_item()`` takes.
 
     Usage:
@@ -144,7 +149,7 @@ def get_files(identifier,
         ['nasa_reviews.xml', 'nasa_meta.xml', 'nasa_files.xml']
     """
     item = get_item(identifier, **get_item_kwargs)
-    return item.get_files(files, formats, glob_pattern)
+    return item.get_files(files, formats, glob_pattern, on_the_fly)
 
 
 def modify_metadata(identifier, metadata,
@@ -294,6 +299,7 @@ def download(identifier,
              retries=None,
              item_index=None,
              ignore_errors=None,
+             on_the_fly=None,
              **get_item_kwargs):
     """Download files from an item.
 
@@ -311,41 +317,63 @@ def download(identifier,
     :param dry_run: (optional) Print URLs to files to stdout rather than downloading
                     them.
 
-    :type clobber: bool
-    :param clobber: (optional) Overwrite local files if they already exist.
+    :type verbose: bool
+    :param verbose: (optional) Turn on verbose output.
 
-    :type no_clobber: bool
-    :param no_clobber: (optional) Do not overwrite local files if they already exist.
+    :type silent: bool
+    :param silent: (optional) Suppress all output.
+
+    :type ignore_existing: bool
+    :param ignore_existing: (optional) Skip files that already exist
+                            locally.
 
     :type checksum: bool
     :param checksum: (optional) Skip downloading file based on checksum.
 
-    :type destdir: bool
-    :param destdir: (optional) Download files to the given directory.
+    :type destdir: str
+    :param destdir: (optional) The directory to download files to.
 
     :type no_directory: bool
-    :param no_directory: (optional) Download files to current working directory rather
-                         than creating an item directory.
+    :param no_directory: (optional) Download files to current working
+                         directory rather than creating an item directory.
 
-    :type verbose: bool
-    :param verbose: (optional) Display download progress.
+    :type retries: int
+    :param retries: (optional) The number of times to retry on failed
+                    requests.
+
+    :type item_index: int
+    :param item_index: (optional) The index of the item for displaying
+                       progress in bulk downloads.
+
+    :type ignore_errors: bool
+    :param ignore_errors: (optional) Don't fail if a single file fails to
+                          download, continue to download other files.
+
+    :type on_the_fly: bool
+    :param on_the_fly: (optional) Download on-the-fly files (i.e. derivative EPUB,
+                       MOBI, DAISY files).
 
     :param \*\*kwargs: Optional arguments that ``get_item`` takes.
+
+    :rtype: bool
+    :returns: True if all files were downloaded successfully.
     """
     item = get_item(identifier, **get_item_kwargs)
-    item.download(files=files,
-                  formats=formats,
-                  glob_pattern=glob_pattern,
-                  dry_run=dry_run,
-                  verbose=verbose,
-                  silent=silent,
-                  ignore_existing=ignore_existing,
-                  checksum=checksum,
-                  destdir=destdir,
-                  no_directory=no_directory,
-                  retries=retries,
-                  item_index=item_index,
-                  ignore_errors=ignore_errors)
+    r = item.download(files=files,
+                      formats=formats,
+                      glob_pattern=glob_pattern,
+                      dry_run=dry_run,
+                      verbose=verbose,
+                      silent=silent,
+                      ignore_existing=ignore_existing,
+                      checksum=checksum,
+                      destdir=destdir,
+                      no_directory=no_directory,
+                      retries=retries,
+                      item_index=item_index,
+                      ignore_errors=ignore_errors,
+                      on_the_fly=on_the_fly)
+    return r
 
 
 def delete(identifier,
@@ -503,11 +531,24 @@ def configure(username=None, password=None, config_file=None):
     username = input('Email address: ') if not username else username
     password = getpass('Password: ') if not password else password
     config_file_path = config_module.write_config_file(username, password, config_file)
-    print('\nConfig saved to: {0}'.format(config_file_path))
+    return config_file_path
 
 
 def get_username(access_key, secret_key):
     """Returns an Archive.org username given an IA-S3 key pair.
+
+    :type access_key: str
+    :param access_key: IA-S3 access_key to use when making the given request.
+
+    :type secret_key: str
+    :param secret_key: IA-S3 secret_key to use when making the given request.
+    """
+    j = get_user_info(access_key, secret_key)
+    return j.get('username')
+
+
+def get_user_info(access_key, secret_key):
+    """Returns details about an Archive.org user given an IA-S3 key pair.
 
     :type access_key: str
     :param access_key: IA-S3 access_key to use when making the given request.
@@ -520,8 +561,7 @@ def get_username(access_key, secret_key):
     r = requests.get(u, params=p, auth=auth.S3Auth(access_key, secret_key))
     r.raise_for_status()
     j = r.json()
-    username = j.get('username')
-    if username:
-        return username
-    else:
+    if j.get('error'):
         raise AuthenticationError(j.get('error'))
+    else:
+        return j

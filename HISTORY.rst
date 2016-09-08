@@ -3,6 +3,64 @@
 Release History
 ---------------
 
+1.0.9 (?)
++++++++++
+
+**Features and Improvements**
+
+- Added support to the CLI for providing username and password as options on the command-line.
+
+1.0.8 (2016-08-10)
+++++++++++++++++++
+
+**Features and Improvements**
+
+- Increased maximum identifier length from 80 to 100 characters in ``ia upload``.
+
+**Bugfixes**
+
+- As of version 2.11.0 of the requests library, all header values must be strings (i.e. not integers).
+  ``internetarchive`` now converts all header values to strings.
+
+1.0.7 (2016-08-02)
+++++++++++++++++++
+
+**Features and Improvements**
+
+- Added ``internetarchive.api.get_user_info()``. 
+
+1.0.6 (2016-07-14)
+++++++++++++++++++
+
+**Bugfixes**
+
+- Fixed bug where upload was failing on file-like objects (e.g. StringIO objects).
+
+1.0.5 (2016-07-07)
+++++++++++++++++++
+
+**Features and Improvements**
+
+- All metadata writes are now submitted at -5 priority by default.
+  This is friendlier to the archive.org catalog, and should only be changed for one-off metadata writes.
+- Expanded scope of valid identifiers in ``utils.validate_ia_identifier`` (i.e. ``ia upload``).
+  Periods are now allowed.
+  Periods, underscores, and dashes are not allowed as the first character.
+
+1.0.4 (2016-06-28)
+++++++++++++++++++
+
+**Features and Improvements**
+
+- Search now uses the v1 scraping API endpoint.
+- Moved ``internetarchive.item.Item.upload.iter_directory()`` to ``internetarchive.utils``.
+- Added support for downloading "on-the-fly" files (e.g. EPUB, MOBI, and DAISY) via ``ia download <id> --on-the-fly`` or ``item.download(on_the_fly=True)``.
+
+**Bugfixes**
+
+- ``s3_is_overloaded()`` now returns ``True`` if the call is unsuccessful.
+- Fixed bug in upload where a derive task wasn't being queued when a directory is uploaded.
+
 1.0.3 (2016-05-16)
 ++++++++++++++++++
 
